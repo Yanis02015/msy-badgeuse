@@ -1,6 +1,7 @@
 <template>
   <v-app>
     <v-app-bar
+      v-if="false"
       app
       color="primary"
       dark
