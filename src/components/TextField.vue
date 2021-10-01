@@ -8,7 +8,10 @@
     :prepend-icon="startIcon"
     :rules="rules"
     :clearable="clearable"
-  ></v-text-field>
+    :loading="loading ? 'primary' : 'false'"
+    :disabled="loading"
+  >
+  </v-text-field>
 </template>
 
 <script>
@@ -26,6 +29,10 @@ export default {
       default: "text",
     },
     clearable: {
+      type: Boolean,
+      default: true,
+    },
+    loading: {
       type: Boolean,
       default: true,
     },

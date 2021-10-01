@@ -92,8 +92,12 @@ app.allowRendererProcessReuse = false;
 
 ipcMain.on("form-submission-event", (event, args) => {
   console.warn(args);
+  let validationLogin = false;
+  if(args.login === 'root' && args.password === 'toor') {
+      validationLogin = true;
+  }
   setTimeout(() => {
-    event.sender.send("form-response", 'ok');
+    event.sender.send("form-response", validationLogin);
     console.warn("renvoyé");
-  }, 3000);
+  }, 500);
 });
