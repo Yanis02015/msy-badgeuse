@@ -1,48 +1,121 @@
 <template>
   <v-app>
-    <v-app-bar v-if="false" app color="primary" dark>
+    <v-app-bar
+      v-if="!itLoginPage"
+      app
+      color="blue lighten-1"
+      dark
+      elevate-on-scroll
+      height="55"
+    >
       <div class="d-flex align-center">
         <v-img
           alt="Vuetify Logo"
           class="shrink mr-2"
           contain
-          src="https://cdn.vuetifyjs.com/images/logos/vuetify-logo-dark.png"
+          src="/images/yanis-indt-logo.png"
           transition="scale-transition"
-          width="40"
+          width="35"
         />
 
-        <v-img
-          alt="Vuetify Name"
-          class="shrink mt-1 hidden-sm-and-down"
-          contain
-          min-width="100"
-          src="https://cdn.vuetifyjs.com/images/logos/vuetify-name-dark.png"
-          width="100"
-        />
+        <v-list-item-content transition="scale-transition">
+          <v-list-item-title
+            style="font-size: 15px !important;"
+            class="text-button font-weight-black mb-0 pb-0"
+          >
+            MSY - Corporation
+          </v-list-item-title>
+          <v-list-item-subtitle
+            style="margin-top: -12px ;"
+            class="text-subtitle-2"
+          >
+            Messaoud - Salah - Yanis
+          </v-list-item-subtitle>
+        </v-list-item-content>
       </div>
 
       <v-spacer></v-spacer>
 
-      <v-btn
-        href="https://github.com/vuetifyjs/vuetify/releases/latest"
-        target="_blank"
-        text
-      >
-        <span class="mr-2">Latest Release</span>
-        <v-icon>mdi-open-in-new</v-icon>
-      </v-btn>
+      <v-menu bottom min-width="200px" flat offset-y>
+        <template v-slot:activator="{ on }">
+          <v-btn class="mr-1" icon small v-on="on">
+            <v-avatar size="48">
+              <v-icon>mdi-account-cog</v-icon>
+            </v-avatar>
+          </v-btn>
+        </template>
+        <v-card class="rounded-lg pb-0 mb-0">
+          <v-list-item-content class="justify-center pb-0">
+            <div class="mx-auto text-center">
+              <v-avatar color="black">
+                <v-icon color="white">mdi-account-cog</v-icon>
+              </v-avatar>
+              <h3 class="mt-3">Yanis OULHACI</h3>
+              <p class="text-caption mt-1">
+                yaniscrab@gmail.com
+              </p>
+              <v-divider></v-divider>
+              <v-btn depressed width="100%" class="py-7" text>
+                Paramètres
+              </v-btn>
+              <v-divider></v-divider>
+              <v-btn depressed width="100%" class="py-7" text @click="logOut">
+                Se déconnecter
+              </v-btn>
+            </div>
+          </v-list-item-content>
+        </v-card>
+      </v-menu>
     </v-app-bar>
 
-    <v-main>
-      <router-view />
+    <!-- Bottom Navigation -->
+
+    <v-bottom-navigation
+      v-if="!itLoginPage"
+      v-model="navigationButtonSelected"
+      horizontal
+      flat
+      input-value
+      mandatory
+      color="primary"
+      style="margin-top: 55px"
+    >
+      <v-btn to="/home">
+        <span>Tableau de bord</span>
+
+        <v-icon>mdi-desktop-mac-dashboard</v-icon>
+      </v-btn>
+
+      <v-btn to="/about">
+        <span>Favorites</span>
+
+        <v-icon>mdi-heart</v-icon>
+      </v-btn>
+
+      <v-btn>
+        <span>Nearby</span>
+
+        <v-icon>mdi-map-marker</v-icon>
+      </v-btn>
+    </v-bottom-navigation>
+
+    <!-- -->
+
+    <v-main class="background-color-main">
+      <transition name="slide-fade">
+        <router-view />
+      </transition>
     </v-main>
+
+    <!-- Stream card online -->
 
     <v-card
       id="live-card"
-      flat
+      :elevation-3="liveCardVisibility"
+      :flat="!liveCardVisibility"
       :class="liveCardVisibility ? '' : 'transparent'"
       class="rounded-lg"
-      max-width="270"
+      width="270"
     >
       <v-toolbar
         flat
@@ -55,7 +128,7 @@
           >Affichage en temps réel</v-toolbar-title
         >
 
-        <v-spacer v-if="true"></v-spacer>
+        <v-spacer></v-spacer>
 
         <v-tooltip transition="slide-x-transition" bottom>
           <template v-slot:activator="{ on, attrs }">
@@ -77,7 +150,7 @@
               </v-icon>
             </v-btn>
           </template>
-          <span> {{ liveCardVisibility ? 'Réduire' : 'Agrandir' }} </span>
+          <span> {{ liveCardVisibility ? "Réduire" : "Agrandir" }} </span>
         </v-tooltip>
       </v-toolbar>
 
@@ -95,7 +168,7 @@
             @click="() => {}"
           >
             <v-list-item-avatar>
-              <img :src="item.image" alt="John" />
+              <v-img :src="item.image" alt="John" />
             </v-list-item-avatar>
             <v-list-item-content>
               <v-list-item-title>
@@ -114,69 +187,52 @@
 </template>
 
 <script>
+import { ipcRenderer } from "electron";
+import { mapState, mapActions } from "vuex";
+
 export default {
   name: "App",
   data: () => ({
+    navigationButtonSelected: 0,
     liveCardVisibility: true,
-    listLiveCard: [
-      {
-        name: "OULHACI",
-        lastname: "Yanis",
-        date: "25/10/2021 08:22",
-        image:
-          "https://avataaars.io/?avatarStyle=Transparent&topType=ShortHairDreads01&accessoriesType=Sunglasses&hairColor=Red&facialHairType=MoustacheFancy&facialHairColor=Black&clotheType=GraphicShirt&clotheColor=Heather&graphicType=Selena&eyeType=Dizzy&eyebrowType=UpDown&mouthType=Serious&skinColor=Light",
-        status: true,
-      },
-      {
-        name: "IBOUDGHACENE",
-        lastname: "Salah",
-        date: "25/10/2021 08:11",
-        image:
-          "https://avataaars.io/?avatarStyle=Transparent&topType=Hat&accessoriesType=Blank&facialHairType=BeardMedium&facialHairColor=Black&clotheType=BlazerSweater&eyeType=Side&eyebrowType=Default&mouthType=Serious&skinColor=DarkBrown",
-        status: false,
-      },
-      {
-        name: "OULHACI",
-        lastname: "Yanis",
-        date: "25/10/2021 14:35",
-        image:
-          "https://avataaars.io/?avatarStyle=Transparent&topType=ShortHairDreads01&accessoriesType=Sunglasses&hairColor=Red&facialHairType=MoustacheFancy&facialHairColor=Black&clotheType=GraphicShirt&clotheColor=Heather&graphicType=Selena&eyeType=Dizzy&eyebrowType=UpDown&mouthType=Serious&skinColor=Light",
-        status: true,
-      },
-      {
-        name: "IBOUDGHACENE",
-        lastname: "Salah",
-        date: "25/10/2021 16:02",
-        image:
-          "https://avataaars.io/?avatarStyle=Transparent&topType=Hat&accessoriesType=Blank&facialHairType=BeardMedium&facialHairColor=Black&clotheType=BlazerSweater&eyeType=Side&eyebrowType=Default&mouthType=Serious&skinColor=DarkBrown",
-        status: false,
-      },
-    ],
+    listLiveCard: [],
+    test: "",
+    loadingToChangeView: false,
   }),
   methods: {
+    ...mapActions(["clearUserInformations"]),
     goToEnd() {
       var liveCardScroll = this.$el.querySelector("#list-live-card-scroll");
       liveCardScroll.scrollTop = liveCardScroll.scrollHeight;
     },
-    addItem() {
-      this.listLiveCard.push({
-        name: "NEW",
-        lastname: "ITEM",
-        date: "24/02/2022",
-        image:
-          "https://avataaars.io/?avatarStyle=Circle&topType=Turban&accessoriesType=Round&hatColor=White&facialHairType=MoustacheMagnum&facialHairColor=BlondeGolden&clotheType=Hoodie&clotheColor=White&eyeType=Surprised&eyebrowType=FlatNatural&mouthType=Tongue&skinColor=Light",
-        status: false,
-      });
+    logOut() {
+      this.loadingToChangeView = true;
+      setTimeout(() => {
+        this.$router.replace("/");
+        this.clearUserInformations();
+      }, 1000);
     },
   },
   mounted() {
     this.goToEnd();
+    ipcRenderer.on("send-card-data", (event, args) => {
+      this.listLiveCard.push(args);
+    });
   },
   watch: {
     listLiveCard() {
       setTimeout(() => {
         this.goToEnd();
       }, 50);
+    },
+  },
+  computed: {
+    ...mapState(["adminIsLogin", "userInformations"]),
+    router() {
+      return this.$route.fullPath;
+    },
+    itLoginPage() {
+      return this.$route.fullPath === "/";
     },
   },
 };
@@ -199,5 +255,21 @@ export default {
 
 .smooth-transition {
   transition: all 1s ease;
+}
+
+.background-color-main {
+  background-color: #edf1fa;
+}
+
+.slide-fade-enter-active {
+  transition: all 0.3s ease;
+}
+.slide-fade-leave-active {
+  transition: all 0.3s cubic-bezier(1, 0.5, 0.8, 1);
+}
+.slide-fade-enter, .slide-fade-leave-to
+/* .slide-fade-leave-active below version 2.1.8 */ {
+  transform: translateX(115px);
+  opacity: 0;
 }
 </style>

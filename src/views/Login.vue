@@ -4,22 +4,25 @@
       class="card-center rounded-lg text-center px-4"
       flat
       width="450"
-      min-height="360"
+      height="370"
     >
       <v-avatar class="avatar-login-top grey" size="90" color="red">
-        <v-icon v-if="!userInformation.login" color="black" size="45">mdi-account</v-icon>
+        <v-icon v-if="!adminIsLogin" color="black" size="45"
+          >mdi-account</v-icon
+        >
         <v-icon v-else color="black" size="45">mdi-account-check</v-icon>
       </v-avatar>
       <v-card-title class=" text-center pb-2 mt-7" primary-title>
-        <span v-if="userInformation.login" class="mx-auto">Bienvenue</span>
+        <span v-if="adminIsLogin" class="mx-auto">Bienvenue</span>
         <span v-else class="mx-auto">Se connecter</span>
       </v-card-title>
 
       <v-form
-        v-if="!userInformation.login"
+        @submit.prevent="submitLoginForm"
+        v-if="!adminIsLogin"
         ref="form"
         class="mt-0 pt-0"
-        v-model="valid"
+        v-model="loginInputValidation"
       >
         <v-card-text>
           <TextField
@@ -43,11 +46,10 @@
           <v-card-actions>
             <v-spacer></v-spacer>
             <v-btn
-              class="rounded-lg"
+              class="rounded-lg pa-6 font-weight-bold"
               elevation="0"
               type="submit"
               color="primary"
-              @click="submitForm"
               :loading="loading"
             >
               Se connecter
@@ -55,16 +57,17 @@
           </v-card-actions>
         </v-card-text>
       </v-form>
-      <v-card v-else flat class="mx-auto mt-12">
-          <v-progress-circular
-            :size="70"
-            :width="4"
-            color="primary"
-            indeterminate
-          ></v-progress-circular>
-          <v-card-text class="subtitle-2 mt-3">
-            Chargement...
-          </v-card-text>
+
+      <v-card v-else-if="!beforeConnexion" flat class="mx-auto mt-12">
+        <v-progress-circular
+          :size="70"
+          :width="4"
+          color="primary"
+          indeterminate
+        ></v-progress-circular>
+        <v-card-text class="subtitle-2 mt-3">
+          Chargement...
+        </v-card-text>
       </v-card>
     </v-card>
   </v-container>
@@ -73,6 +76,7 @@
 <script>
 import TextField from "../components/TextField";
 import { ipcRenderer } from "electron";
+import { mapState, mapActions } from "vuex";
 
 export default {
   name: "Home",
@@ -80,46 +84,64 @@ export default {
     login: "",
     password: "",
     loading: false,
-    valid: null,
+    beforeConnexion: false,
+    loginInputValidation: null,
     requiredRules: [(v) => !!v || "Name is required"],
     errorMessage: "&nbsp;",
-    userInformation: {
-      login: false,
-      name: "NOM",
-      lastname: "Prénom de l'admin",
-      image: "",
-    },
   }),
+
+  mounted() {
+    if (this.adminIsLogin) {
+      this.loginToHome();
+    }
+  },
 
   components: {
     TextField,
   },
 
   methods: {
+    ...mapActions(["setUserInformations", "setUserLoginStatus"]),
     loginAction() {
       this.$refs.form.validate();
     },
-    submitForm() {
+    submitLoginForm() {
       this.$refs.form.validate();
-      if (this.valid) {
+      if (this.loginInputValidation) {
         this.errorMessage = "&nbsp;";
         this.loading = true;
-        ipcRenderer.send("form-submission-event", {
+        ipcRenderer.send("form-login-submission-event", {
           login: this.login,
           password: this.password,
         });
-        ipcRenderer.once("form-response", (event, arg) => {
+        ipcRenderer.once("form-login-response", (event, arg) => {
           console.log(arg);
-          if (!arg)
+          if (arg.errorMessage) {
             this.errorMessage =
-              "Erreur d'authentification, vérifiez vos données.";
-          else this.errorMessage = "Connexion réussi";
-          this.loading = false;
-          this.userInformation.login = true;
+              "Erreur d'authentification, " + arg.errorMessage;
+            this.loading = false;
+          } else {
+            this.errorMessage = "Connexion réussi";
+            this.setUserInformations(arg);
+            this.loginToHome();
+          }
         });
       }
     },
+    loginToHome() {
+      this.beforeConnexion = false;
+      this.loading = false;
+      this.setUserLoginStatus(true);
+      setTimeout(() => {
+        this.$router.replace("/home");
+        this.beforeConnexion = true;
+      }, 1000);
+    },
   },
+  computed: {
+    ...mapState(["adminIsLogin", "userInformations"]),
+  },
+  destroyed() {},
 };
 </script>
 
