@@ -12,7 +12,7 @@
         >
         <v-icon v-else color="black" size="45">mdi-account-check</v-icon>
       </v-avatar>
-      <v-card-title class=" text-center pb-2 mt-7" primary-title>
+      <v-card-title class="text-center pb-2 mt-7" primary-title>
         <span v-if="adminIsLogin" class="mx-auto">Bienvenue</span>
         <span v-else class="mx-auto">Se connecter</span>
       </v-card-title>
@@ -20,12 +20,13 @@
       <v-form
         @submit.prevent="submitLoginForm"
         v-if="!adminIsLogin"
-        ref="form"
+        ref="loginForm"
         class="mt-0 pt-0"
         v-model="loginInputValidation"
       >
         <v-card-text>
           <TextField
+            required
             @send-value="(e) => (login = e.value)"
             type="text"
             label="Nom d'authentification"
@@ -33,6 +34,7 @@
             :loading="loading"
           />
           <TextField
+            required
             @send-value="(e) => (password = e.value)"
             startIcon="mdi-lock-outline"
             label="Mot de passe"
@@ -102,11 +104,8 @@ export default {
 
   methods: {
     ...mapActions(["setUserInformations", "setUserLoginStatus"]),
-    loginAction() {
-      this.$refs.form.validate();
-    },
     submitLoginForm() {
-      this.$refs.form.validate();
+      this.$refs.loginForm.validate();
       if (this.loginInputValidation) {
         this.errorMessage = "&nbsp;";
         this.loading = true;

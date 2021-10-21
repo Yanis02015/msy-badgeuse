@@ -6,7 +6,7 @@
     :label="label"
     :type="type"
     :prepend-icon="startIcon"
-    :rules="rules"
+    :rules="required ? rules : []"
     :clearable="clearable"
     :loading="loading ? 'primary' : 'false'"
     :disabled="loading"
@@ -19,7 +19,7 @@ export default {
   props: {
     startIcon: {
       type: String,
-      required: true,
+      required: false,
     },
     label: {
       type: String,
@@ -34,12 +34,20 @@ export default {
     },
     loading: {
       type: Boolean,
-      default: true,
+      default: false,
     },
+    required: {
+      type: Boolean,
+      default: false,
+    },
+    content: {
+      type: String,
+      default: '',
+    }
   },
 
   data: () => ({
-    value: "",
+    value: '',
   }),
 
   methods: {
@@ -59,5 +67,9 @@ export default {
       this.emitValue();
     },
   },
+
+  mounted() {
+    this.value = this.content || "";
+  }
 };
 </script>
