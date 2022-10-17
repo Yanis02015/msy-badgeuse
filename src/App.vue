@@ -55,7 +55,13 @@
                 yaniscrab@gmail.com
               </p>
               <v-divider></v-divider>
-              <v-btn depressed width="100%" class="py-7" text>
+              <v-btn
+                depressed
+                width="100%"
+                class="py-7"
+                text
+                @click="settingsMenu"
+              >
                 Paramètres
               </v-btn>
               <v-divider></v-divider>
@@ -80,7 +86,7 @@
       color="primary"
       style="margin-top: 55px"
     >
-      <v-btn to="/home">
+      <v-btn to="/dashboard">
         <span>Tableau de bord</span>
 
         <v-icon>mdi-desktop-mac-dashboard</v-icon>
@@ -92,10 +98,10 @@
         <v-icon>mdi-heart</v-icon>
       </v-btn>
 
-      <v-btn>
-        <span>Nearby</span>
+      <v-btn to="/home">
+        <span>Tous les employés</span>
 
-        <v-icon>mdi-map-marker</v-icon>
+        <v-icon>mdi-account-group</v-icon>
       </v-btn>
     </v-bottom-navigation>
 
@@ -163,7 +169,7 @@
         v-if="liveCardVisibility"
         id="list-live-card-scroll"
         height="350"
-        class="overflow-y-auto transparent pt-0"
+        class="overflow-y-auto transparent py-0"
         two-line
       >
         <v-card flat tile v-for="(item, index) in listLiveCard" :key="index">
@@ -198,6 +204,54 @@
     </v-card>
 
     <!-- dialog & notification -->
+
+    <v-dialog
+      v-model="portConfiguration.dialogModel"
+      persistent
+      max-width="500px"
+      transition="dialog-transition"
+    >
+      <v-card>
+        <v-card-title primary-title>
+          Choix de port
+        </v-card-title>
+        <v-card-text class="pb-0 ma-0">
+          <v-radio-group
+            v-model="portConfiguration.portSelected"
+            class="pb-0 ma-0 red--text"
+          >
+            <template v-slot:label>
+              <div>
+                Veuillez choisir le port auquel le
+                <strong>lecteur de carte</strong> est branché
+              </div>
+            </template>
+            <v-radio
+              v-for="(item, index) in portConfiguration.portList"
+              :key="index"
+            >
+              <template v-slot:label>
+                <span class="black--text font-weight-bold">{{ item }}</span>
+              </template>
+            </v-radio>
+          </v-radio-group>
+        </v-card-text>
+        <v-card-actions class="ma-0">
+          <v-spacer></v-spacer>
+          <v-btn
+            color="error darken-1"
+            text
+            plain
+            @click="portConfiguration.dialogModel = false"
+          >
+            Annuler la configuration
+          </v-btn>
+          <v-btn color="primary darken-1" text @click="updatePortListening">
+            Continuer
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <v-card>
       <v-dialog v-model="newCard.dialogCard" persistent max-width="490">
@@ -274,7 +328,10 @@
             Supprimer la carte ?
           </v-card-title>
           <v-card-text>
-            <span v-if="!cardInactive.status" class="error--text font-weight-medium">
+            <span
+              v-if="!cardInactive.status"
+              class="error--text font-weight-medium"
+            >
               En acceptant, vous allez définir l'employé
               <span class="font-weight-black black--text">
                 -
@@ -695,6 +752,11 @@ import { mapState, mapActions } from "vuex";
 export default {
   name: "App",
   data: () => ({
+    portConfiguration: {
+      dialogModel: false,
+      portList: [],
+      portSelected: 0,
+    },
     snackbar: false,
     navigationButtonSelected: 0,
     liveCardVisibility: true,
@@ -737,6 +799,7 @@ export default {
   }),
   methods: {
     ...mapActions([
+      "setPortConnexion",
       "clearUserInformations",
       "setAlert",
       "setEditCardModel",
@@ -851,6 +914,16 @@ export default {
     capitalizeFirstLetter(string) {
       return string ? string.charAt(0).toUpperCase() + string.slice(1) : string;
     },
+    updatePortListening() {
+      ipcRenderer.send(
+        "set-port-name-event",
+        this.portConfiguration.portList[this.portConfiguration.portSelected]
+      );
+      this.portConfiguration.dialogModel = false
+    },
+    settingsMenu() {
+      ipcRenderer.send("get-list-port-name-event");
+    },
   },
   mounted() {
     this.goToEnd();
@@ -869,6 +942,14 @@ export default {
       setTimeout(() => {
         this.setAlert({ model: false });
       }, 2000);
+    });
+    ipcRenderer.send("configure-port-name-event");
+    ipcRenderer.on("configure-port-name-replay", (event, args) => {
+      console.log(args);
+      if (args.listOfPort) {
+        this.portConfiguration.portList = args.listOfPort;
+        this.portConfiguration.dialogModel = true;
+      }
     });
   },
   watch: {
@@ -890,6 +971,7 @@ export default {
   },
   computed: {
     ...mapState([
+      "portConnexion",
       "adminIsLogin",
       "userInformations",
       "alert",

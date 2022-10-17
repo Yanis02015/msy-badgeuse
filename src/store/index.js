@@ -6,12 +6,16 @@ Vue.use(Vuex);
 export default new Vuex.Store({
   state: {
     adminIsLogin: false,
+    portConnexion: {
+      portNameModel: false,
+      portName: '',
+    },
     editCardModel: {
       model: false,
       validation: null,
       loading: false,
       avatarIndex: 0,
-      idEmploye: '',
+      idEmploye: "",
       name: "",
       lastname: "",
       email: "",
@@ -64,6 +68,9 @@ export default new Vuex.Store({
     SET_CARD_INACTIVE(state, payload) {
       state.cardInactive = payload;
     },
+    SET_PORT_CONNEXION(state, payload) {
+      state.portConnexion = payload;
+    }
   },
   actions: {
     setUserInformations(context, payload) {
@@ -93,6 +100,9 @@ export default new Vuex.Store({
     },
     setCardInactive(context, payload) {
       context.commit("SET_CARD_INACTIVE", payload);
+    },
+    setPortConnexion(context, payload) {
+      context.commit("SET_PORT_CONNEXION", payload)
     }
   },
   modules: {},

@@ -81,7 +81,6 @@ import { ipcRenderer } from "electron";
 import { mapState, mapActions } from "vuex";
 
 export default {
-  name: "Home",
   data: () => ({
     login: "",
     password: "",
@@ -94,7 +93,7 @@ export default {
 
   mounted() {
     if (this.adminIsLogin) {
-      this.loginToHome();
+      this.loginToDashboard();
     }
   },
 
@@ -122,17 +121,17 @@ export default {
           } else {
             this.errorMessage = "Connexion réussi";
             this.setUserInformations(arg);
-            this.loginToHome();
+            this.loginToDashboard();
           }
         });
       }
     },
-    loginToHome() {
+    loginToDashboard() {
       this.beforeConnexion = false;
       this.loading = false;
       this.setUserLoginStatus(true);
       setTimeout(() => {
-        this.$router.replace("/home");
+        this.$router.replace("/dashboard");
         this.beforeConnexion = true;
       }, 1000);
     },

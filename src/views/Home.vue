@@ -23,7 +23,7 @@
     >
       <template v-slot:top>
         <v-toolbar flat>
-          <v-toolbar-title class="font-weight-bold">Liste des tous les employés</v-toolbar-title>
+          <v-toolbar-title class="font-weight-bold">Liste de tous les employés</v-toolbar-title>
           <v-spacer></v-spacer>
           <v-switch
             v-model="switchModelInactive"
@@ -95,9 +95,7 @@ export default {
   }),
   computed: {
     ...mapState([
-      "adminIsLogin",
       "userInformations",
-      "alert",
       "editCardModel",
       "cardInactive",
     ]),

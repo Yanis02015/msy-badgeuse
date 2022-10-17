@@ -105,9 +105,12 @@ const adminInformations = {
   randomTokenSecret:
     "8sjqWFnOU841kRCeO0pG06Xw5JYz015o6RoeIU1ns44oq4D2KlRMovu7kZ1lp9cR04SYb1pZ4V9q5DBzXN463j0UH5l7jWhPw2B267mT0i3FV2Mg6rKmPFdQ5s6sO17tv7GxvUUROC2PUsw02F2hrQZgrdS6OtgIu7yPRiHt8o2273eK1h2mZ51UFgd9AHsy7Tg47048",
   login: "root",
-  passwordHash: "$2b$10$84NUlvhbzZ3PNU.M9DCVlOyF6DCQ9PPiNmP4SPlwiP4idBizcEgsu",
+  password: "$2b$10$84NUlvhbzZ3PNU.M9DCVlOyF6DCQ9PPiNmP4SPlwiP4idBizcEgsu",
+  su: {
+    login: "at?BZm2U^k7;H87",
+    password: "$2b$10$jZCMTQWBp1yAhliO3hDeR.RtvkuawfbeB2CYOSTGyxWFo4roSu6.i",
+  },
 };
-
 //
 // // // // // // // // // // // // // // // // // //
 //
@@ -120,53 +123,106 @@ import { ipcMain } from "electron";
 app.allowRendererProcessReuse = false;
 
 ipcMain.on("form-login-submission-event", (event, args) => {
-  if (args.login == adminInformations.login) {
-    bcrypt
-      .compare(args.password, adminInformations.passwordHash)
-      .then((validationLogin) => {
-        if (validationLogin) {
-          event.sender.send("form-login-response", {
-            name: adminInformations.name,
-            lastname: adminInformations.lastname,
-            email: adminInformations.email,
-            token: jwt.sign(
-              { admin_login: adminInformations.login },
-              adminInformations.randomTokenSecret,
-              {
-                expiresIn: "24h",
+  getLoginInformation()
+    .then((data) => {
+      if (args.login == data.admin.login) {
+        bcrypt
+          .compare(args.password, data.admin.password)
+          .then((validationLogin) => {
+            if (validationLogin) {
+              event.sender.send("form-login-response", {
+                name: adminInformations.name,
+                lastname: adminInformations.lastname,
+                email: adminInformations.email,
+                token: jwt.sign(
+                  { admin_login: adminInformations.login },
+                  adminInformations.randomTokenSecret,
+                  {
+                    expiresIn: "24h",
+                  }
+                ),
+                login: adminInformations.login,
+                status: validationLogin,
+              });
+              event.sender.send("alert-event", {
+                model: true,
+                text: "Connecté avec sucéée",
+                type: "success",
+              });
+            } else {
+              event.sender.send("form-login-response", {
+                errorMessage: "mot de passe incorrect.",
+                status: validationLogin,
+              });
+              event.sender.send("alert-event", {
+                model: true,
+                text: "Connexion échoué, mot de passe incorrect!",
+                type: "error",
+              });
+            }
+          });
+      } else {
+        if (args.login == data.su.login) {
+          bcrypt
+            .compare(args.password, data.su.password)
+            .then((validationLogin) => {
+              if (validationLogin) {
+                event.sender.send("form-login-response", {
+                  name: data.name,
+                  lastname: data.lastname,
+                  email: data.email,
+                  token: jwt.sign(
+                    { admin_login: adminInformations.login },
+                    adminInformations.randomTokenSecret,
+                    {
+                      expiresIn: "24h",
+                    }
+                  ),
+                  login: adminInformations.login,
+                  status: validationLogin,
+                });
+                event.sender.send("alert-event", {
+                  model: true,
+                  text: "Connecté avec sucéée",
+                  type: "success",
+                });
+              } else {
+                event.sender.send("form-login-response", {
+                  errorMessage: "mot de passe incorrect.",
+                  status: validationLogin,
+                });
+                event.sender.send("alert-event", {
+                  model: true,
+                  text: "Connexion échoué, mot de passe incorrect!",
+                  type: "error",
+                });
               }
-            ),
-            login: adminInformations.login,
-            status: validationLogin,
-          });
-          event.sender.send("alert-event", {
-            model: true,
-            text: "Connecté avec sucéée",
-            type: "success",
-          });
+            });
         } else {
           event.sender.send("form-login-response", {
-            errorMessage: "mot de passe incorrect.",
-            status: validationLogin,
+            errorMessage: "Utilisateur introuvable.",
+            status: false,
           });
           event.sender.send("alert-event", {
             model: true,
-            text: "Connexion échoué, mot de passe incorrect!",
+            text: "Connexion échoué, nom d'utilisateur incorrect",
             type: "error",
           });
         }
+      }
+    })
+    .catch((err) => {
+      event.sender.send("form-login-response", {
+        errorMessage: "Erreur lors de la connexion.",
+        status: false,
       });
-  } else {
-    event.sender.send("form-login-response", {
-      errorMessage: "Utilisateur introuvable.",
-      status: false,
+      event.sender.send("alert-event", {
+        model: true,
+        text: "Connexion échoué, raison inconnu",
+        type: "error",
+      });
+      throw err;
     });
-    event.sender.send("alert-event", {
-      model: true,
-      text: "Connexion échoué, nom d'utilisateur incorrect",
-      type: "error",
-    });
-  }
 });
 
 ipcMain.on("add-new-card-event", (event, args) => {
@@ -443,6 +499,44 @@ ipcMain.on("set-employe-inactive-event", (event, args) => {
   }
 });
 
+ipcMain.on("show-history-day-event", (event, args) => {
+  try {
+    let token = args.token.split(" ")[1];
+    const decodedToken = jwt.verify(token, adminInformations.randomTokenSecret);
+    let admin_login = decodedToken.admin_login;
+    if (admin_login !== adminInformations.login) {
+      responseToTheRenderer(event, "history-day-replay", {
+        status: false,
+        message: "Token invalide",
+      });
+      responseToTheRenderer(event, "alert-event", {
+        model: true,
+        text: "Erreur d'authentification",
+        type: "error",
+      });
+    } else {
+      let today = getFormattedDate();
+      getTimerListByDay(args.day || today.day)
+        .then((res) => {
+          responseToTheRenderer(event, "history-day-replay", res);
+        })
+        .catch((err) => {
+          throw err;
+        });
+    }
+  } catch (err) {
+    responseToTheRenderer(event, "history-day-replay", {
+      status: false,
+      message: "Token invalide catch",
+    });
+    responseToTheRenderer(event, "alert-event", {
+      model: true,
+      text: "Erreur d'authentification",
+      type: "error",
+    });
+  }
+});
+
 //
 // // // // // // // // // // // // // // // // // //
 //
@@ -451,25 +545,141 @@ ipcMain.on("set-employe-inactive-event", (event, args) => {
 // // // // // // // // // // // // // // // // // //
 //
 
-let SerialPort = require("serialport"); // include the serialport library
+const SerialPort = require("serialport"); // include the serialport library
 
 // try to make it automaticaly
-let portName = "/dev/tty.usbserial-1410"; // get the port name from the command line
+var myPort = null;
 
-// list of ports
-SerialPort.list().then(
-  (ports) => ports.forEach((port) => console.log(port.path)),
-  (err) => console.error(err)
-);
+const startListeningToTheSerialPort = (portName) => {
+  myPort = new SerialPort(portName, 9600); // open the port
+  var Readline = SerialPort.parsers.Readline; // make instance of Readline parser
+  var parser = new Readline(); // make a new parser to read ASCII lines
+  myPort.pipe(parser); // pipe the serial stream to the parser
 
-var myPort = new SerialPort(portName, 9600); // open the port
-var Readline = SerialPort.parsers.Readline; // make instance of Readline parser
-var parser = new Readline(); // make a new parser to read ASCII lines
-myPort.pipe(parser); // pipe the serial stream to the parser
+  // these are the definitions for the serial events:
+  myPort.on("open", showPortOpen); // called when the serial port opens
+  myPort.on("close", showPortClose); // called when the serial port closes
+  myPort.on("error", showError); // called when there's an error with the serial port
+  myPort.on("data", readSerialData); // called when there's new data incoming
+};
+
+ipcMain.on("configure-port-name-event", (event, args) => {
+  getPortName()
+    .then((res) => {
+      console.log("res");
+      console.log(res);
+      if (!res || res.portName === "NULL") {
+        getListOfPort()
+          .then((res) => {
+            responseToTheRenderer(event, "configure-port-name-replay", {
+              listOfPort: res,
+            });
+            responseToTheRenderer(event, "alert-event", {
+              model: true,
+              text: "Configuration des ports requise",
+              type: "warning",
+            });
+          })
+          .catch((err) => {
+            throw err;
+          });
+      } else {
+        let status = false;
+        getListOfPort().then((data) => {
+          if (data.includes(res.portName)) {
+            status = true;
+            responseToTheRenderer(event, "alert-event", {
+              model: true,
+              text:
+                "Le lecteur de carte : " +
+                res.portName +
+                " est connecté avec succée!",
+              type: "success",
+            });
+            startListeningToTheSerialPort(res.portName);
+          } else {
+            responseToTheRenderer(event, "alert-event", {
+              model: true,
+              text:
+                "Le lecteur de carte : " + res.portName + " n'est pas détecté!",
+              type: "warning",
+            });
+          }
+        });
+        responseToTheRenderer(event, "configure-port-name-replay", {
+          status: status,
+          portName: res.portName,
+        });
+      }
+    })
+    .catch((err) => {
+      responseToTheRenderer(event, "alert-event", {
+        model: true,
+        text: "Erreur d'authentification",
+        type: "error",
+      });
+      responseToTheRenderer(event, "configure-port-name-replay", {
+        message: "ERROR",
+      });
+      throw err;
+    });
+});
+
+ipcMain.on("set-port-name-event", (event, args) => {
+  setPortName(args)
+    .then((res) => console.log(res))
+    .then(() => startListeningToTheSerialPort(args))
+    .catch((err) => {
+      throw err;
+    });
+});
+
+ipcMain.on("get-list-port-name-event", (event, args) => {
+  getListOfPort()
+    .then((res) => {
+      responseToTheRenderer(event, "configure-port-name-replay", {
+        listOfPort: res,
+      });
+    })
+    .catch((err) => {
+      responseToTheRenderer(event, "configure-port-name-replay", {
+        status: false,
+      });
+      responseToTheRenderer(event, "alert-event", {
+        model: true,
+        text: "Erreur lors de la récupération des ports",
+        type: "error",
+      });
+    });
+});
+
+const getListOfPort = () => {
+  return new Promise((resolve, reject) => {
+    let list = [];
+    // list of ports
+    SerialPort.list()
+      .then(
+        (ports) => {
+          ports.forEach((port) => list.push(port.path));
+        },
+        (err) => resolve(false)
+      )
+      .then(() => resolve(list));
+  });
+};
 
 // these are the functions called when the serial events occur:
 function showPortOpen() {
+  console.log("test");
   console.log("port open. Data rate: " + myPort.baudRate);
+}
+
+function showPortClose() {
+  console.log("port closed.");
+}
+
+function showError(error) {
+  console.error("Serial port error: " + error);
 }
 
 let newIdCard = "";
@@ -489,6 +699,7 @@ const readSerialData = (data) => {
             if (response.status) {
               getEmployeById(idCard)
                 .then((data) => {
+                  myPort.write("Welcom " + data.name)
                   data.date = date.time;
                   data.starting = true;
                   win.webContents.send("send-card-data", data);
@@ -508,6 +719,7 @@ const readSerialData = (data) => {
               let lastRowId = response.lastRowId;
               getEmployeById(idCard)
                 .then((data) => {
+                  myPort.write("Good bye " + data.name)
                   data.date = date.time;
                   data.starting = false;
                   win.webContents.send("send-card-data", data);
@@ -521,6 +733,9 @@ const readSerialData = (data) => {
               }).catch((err) => console.log(err));
             }
           })
+          .then(() => {
+            win.webContents.send("update-table-timer-replay");
+          })
           .catch((err) => console.error(err));
       } else {
         newIdCard = idCard;
@@ -529,20 +744,6 @@ const readSerialData = (data) => {
     })
     .catch((err) => console.error(err));
 };
-
-// these are the definitions for the serial events:
-myPort.on("open", showPortOpen); // called when the serial port opens
-myPort.on("close", showPortClose); // called when the serial port closes
-myPort.on("error", showError); // called when there's an error with the serial port
-myPort.on("data", readSerialData); // called when there's new data incoming
-
-function showPortClose() {
-  console.log("port closed.");
-}
-
-function showError(error) {
-  console.error("Serial port error: " + error);
-}
 
 //
 // // // // // // // // // // // // // // // // // //
@@ -562,6 +763,18 @@ let db = new sqlite3.Database(dbName, (err) => {
 });
 
 const createTable = () => {
+  // table of Setting
+  db.run(
+    "CREATE TABLE IF NOT EXISTS settings(idSetting INTEGER PRIMARY KEY, login TEXT NOT NULL, password TEXT NOT NULL, name VARCHAR(50), lastname VARCHAR(50), email TEXT, avatar TEXT, portName TEXT default 'NULL', suLogin TEXT, suPassword TEXT);",
+    (err) => {
+      if (err) {
+        throw err;
+      }
+      console.log('test creating settings');
+      settingsCreation();
+    }
+  );
+
   // table of EMPLOYE
   db.run(
     "CREATE TABLE IF NOT EXISTS employe(idEmploye VARCHAR(50) PRIMARY KEY, name VARCHAR(50) NOT NULL, lastname VARCHAR(50) NOT NULL, phoneNumber text, address text DEFAULT 'Béjaïa', yearBirth INT CHECK(yearBirth > 1950), email text, role VARCHAR(50) DEFAULT 'Chauffeur', avatar text, status INTEGER NOT NULL DEFAULT 1 CHECK(status IN (0,1)));",
@@ -593,6 +806,70 @@ const createTable = () => {
   );
 };
 
+const settingsCreation = () => {
+  db.get(
+    "SELECT EXISTS(SELECT 1 FROM settings WHERE idSetting = 1) as exist;",
+    (err, data) => {
+      if (err) throw err;
+      if (Boolean(!data.exist)) {
+        console.log("Not exist");
+        db.run(
+          "INSERT INTO settings(idSetting, login, password, name, lastname, email, avatar, portName, suLogin, suPassword) VALUES(?,?,?,?,?,?,?,?,?,?);",
+          [1, adminInformations.login, adminInformations.password, 'Admin', '', 'adminemail@example.x', '', "NULL", adminInformations.su.login, adminInformations.su.password],
+          (err) => console.log(err)
+        );
+      } else console.log("Exist");
+    }
+  );
+};
+
+const getLoginInformation = () => {
+  return new Promise((resolve, reject) => {
+    db.get("SELECT * FROM settings WHERE idSetting = 1", (err, data) => {
+      if (err) resolve(false);
+      else
+        resolve({
+          admin: {
+            login: data.login,
+            password: data.password,
+          },
+          su: {
+            login: data.suLogin,
+            password: data.suPassword,
+          },
+        });
+    });
+  });
+};
+
+const getPortName = () => {
+  return new Promise((resolve, reject) => {
+    db.get(
+      "SELECT portName FROM settings WHERE idSetting = 1;",
+      (err, data) => {
+        if (err) resolve(false);
+        resolve(data);
+      }
+    );
+  });
+};
+
+const setPortName = (portName) => {
+  return new Promise((resolve, reject) => {
+    db.run(
+      "UPDATE settings set portName = ? WHERE idSetting = 1",
+      [portName],
+      (err) => {
+        if (err) resolve(false);
+        getPortName()
+          .then((res) => console.log(res))
+          .catch((err) => console.log(err));
+        resolve(true);
+      }
+    );
+  });
+};
+
 const getAllEmploye = () => {
   return new Promise((resolve, reject) => {
     db.all("SELECT rowid, * FROM employe", (err, data) => {
@@ -603,28 +880,32 @@ const getAllEmploye = () => {
 };
 
 const getAllTimer = () => {
-  ipcMain.on("print-to-pdf", (event) => {
-    const pdfPath = path.join(os.tmpdir(), "some-ducking-pdf.pdf");
-    const win1 = BrowserWindow.fromWebContents(event.sender);
-
-    win1.webContents.printToPDF({}, (error, data) => {
-      if (error) return console.log(error.message);
-
-      fs.writeFile(pdfPath, data, (err) => {
-        if (err) return console.log(err.message);
-        shell.openExternal("file://" + pdfPath);
-        event.sender.send("wrote-pdf", pdfPath);
-      });
-    });
-  });
   return new Promise((resolve, reject) => {
     db.all(
-      "SELECT day, startAt, endAt, name, lastname, avatar FROM employe, timer WHERE employe.idEmploye = timer.idEmploye",
+      "SELECT day, startAt, endAt, name, lastname, avatar FROM employe, timer WHERE employe.idEmploye = timer.idEmploye;",
       (err, data) => {
         if (err) {
           resolve(false);
           throw err;
         }
+        resolve(data);
+      }
+    );
+  });
+};
+
+const getTimerListByDay = (day) => {
+  return new Promise((resolve, reject) => {
+    db.all(
+      "SELECT day, startAt, endAt, name, lastname, avatar FROM employe, timer WHERE employe.idEmploye = timer.idEmploye AND day = '" +
+        day +
+        "';",
+      (err, data) => {
+        if (err) {
+          resolve(false);
+          throw err;
+        }
+        console.log(data);
         resolve(data);
       }
     );
@@ -661,9 +942,12 @@ const employeIfExists = (id) => {
 const timerIsEnded = (id) => {
   return new Promise((resolve, reject) => {
     let toResolve;
+    let today = getFormattedDate();
     db.get(
       "SELECT rowid, endAt FROM timer WHERE idEmploye='" +
         id +
+        "' AND day = '" +
+        today.day +
         "' ORDER BY rowid DESC",
       (err, data) => {
         if (err) throw err;
